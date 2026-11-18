@@ -571,6 +571,13 @@
             <button id="btnModoPrint" class="secundario pequeno noPrint">📸 Modo print</button>
           </div>
           <div id="listaRanking"></div>
+          <div id="boxHall" class="card oculto" style="margin-top:14px">
+            <div class="linha">
+              <h3 style="margin:0">🏆 Hall da Fama</h3>
+              <span id="tagHall" class="tag oculto">OCULTO PARA MEMBROS</span>
+            </div>
+            <p class="muted" style="margin:10px 0 0">Campeões e vices por campeonato. Em preparação.</p>
+          </div>
         </div>
       </section>
 
@@ -706,6 +713,10 @@
             </label>
             <button type="submit">Criar campeonato</button>
           </form>
+          <div style="margin:6px 0 18px">
+            <div class="muted">Hall da Fama (aparece na aba Ranking para os membros)</div>
+            <button type="button" id="btnHallAtivo" class="secundario pequeno" style="margin-top:6px">Ativar Hall da Fama</button>
+          </div>
           <div id="boxConvite" style="margin:6px 0 18px">
             <div class="muted">Link de convite (já leva o código, ninguém precisa digitar)</div>
             <input id="linkConvite" readonly style="margin-bottom:8px">
@@ -726,28 +737,45 @@
         </div>
 
         <div class="card">
-          <h3>Editar ou excluir partida</h3>
-          <form id="formEditarJogo">
-            <label>Partida
-              <select id="edJogoSel" required></select>
-            </label>
-            <label>Campeonato
-              <select id="edCamp"></select>
-            </label>
+          <h3>Rodadas e partidas</h3>
+          <p class="muted">Escolha o campeonato e a rodada, depois toque em um jogo para editar.</p>
+          <label>Campeonato
+            <select id="rodCamp"></select>
+          </label>
+          <div id="rodChips" class="chips" style="margin:10px 0"></div>
+          <div id="rodLista"></div>
+          <div class="botoes">
+            <button type="button" id="btnRodNovo" class="secundario pequeno">+ Novo jogo nesta rodada</button>
+            <button type="button" id="btnRodApagar" class="perigo pequeno">Apagar rodada inteira</button>
+          </div>
+          <form id="formRodada" class="oculto" style="margin-top:14px;border-top:1px solid var(--borda);padding-top:12px">
+            <div id="rodTitulo" style="font-weight:800;margin-bottom:8px"></div>
             <label>Rodada
-              <input id="edRodada" type="number" min="1" required>
+              <input id="rodRodada" type="number" min="1" required>
             </label>
             <label>Mandante
-              <select id="edMandante" required></select>
+              <select id="rodMandante" required></select>
             </label>
             <label>Visitante
-              <select id="edVisitante" required></select>
+              <select id="rodVisitante" required></select>
             </label>
-            <div style="margin:12px 0"><div class="muted" style="margin-bottom:6px;font-size:13px">Data e hora (horário de Brasília)</div><input id="edData" type="hidden"><div class="dtp" data-alvo="edData"></div></div>
+            <div style="margin:12px 0"><div class="muted" style="margin-bottom:6px;font-size:13px">Data e hora (horário de Brasília)</div><input id="rodData" type="hidden"><div class="dtp" data-alvo="rodData"></div></div>
+            <div id="boxPlacarRod">
+              <div class="grade">
+                <label>Gols do mandante
+                  <input id="rodGM" type="number" min="0" max="30" inputmode="numeric">
+                </label>
+                <label>Gols do visitante
+                  <input id="rodGV" type="number" min="0" max="30" inputmode="numeric">
+                </label>
+              </div>
+              <div class="muted" style="font-size:12px">Deixe vazio se a partida ainda não aconteceu.</div>
+            </div>
             <div class="botoes">
-              <button type="submit">Salvar alterações</button>
-              <button type="button" id="btnReabrirJogo" class="secundario">Reabrir (desfazer resultado)</button>
-              <button type="button" id="btnExcluirJogo" class="perigo">Excluir partida</button>
+              <button type="submit">Salvar</button>
+              <button type="button" id="btnRodReabrir" class="secundario oculto">Reabrir resultado</button>
+              <button type="button" id="btnRodExcluir" class="perigo oculto">Excluir partida</button>
+              <button type="button" id="btnRodCancelar" class="secundario">Cancelar</button>
             </div>
           </form>
         </div>
@@ -1343,8 +1371,31 @@
       box.classList.remove("oculto");
     }
 
+    // Hall da Fama: membros veem só quando o admin ativa; admin sempre vê (com aviso).
+    function atualizarHall() {
+      const d = estado.dados, u = estado.usuario;
+      if (!d || !u || !$("boxHall")) return;
+      const ehAdm = u.perfil === "ADMIN";
+      const ativo = !!(d.config && d.config.hallAtivo);
+      $("boxHall").classList.toggle("oculto", !(ativo || ehAdm));
+      $("tagHall").classList.toggle("oculto", ativo || !ehAdm);
+      const b = $("btnHallAtivo");
+      if (b) b.textContent = ativo ? "Desativar Hall da Fama" : "Ativar Hall da Fama";
+    }
+
+    $("btnHallAtivo") && $("btnHallAtivo").addEventListener("click", async () => {
+      const atual = !!(estado.dados.config && estado.dados.config.hallAtivo);
+      if (!atual && !confirm("Mostrar o Hall da Fama para todos os membros?")) return;
+      try {
+        await executar("definirHallDaFama", estado.token, !atual);
+        await atualizarDadosSemBloqueio();
+        mostrarMensagem(!atual ? "Hall da Fama visível para os membros." : "Hall da Fama oculto.", "ok");
+      } catch (erro) {}
+    });
+
     function atualizarBarra() {
       atualizarLembrete();
+      atualizarHall();
       const n = estado.dados && estado.usuario && estado.usuario.perfil !== "ADMIN"
         ? sujosRodada().length : 0;
       const visivel = n > 0 &&
@@ -1581,12 +1632,10 @@
       preencherSelect("editTimeId", times, "Escolha o time");
 
       const camps = (d.campeonatos || []).map(c => ({ value: c.id, texto: c.nome }));
-      ["jogoCamp", "loteCamp", "edCamp"].forEach(id => {
+      ["jogoCamp", "loteCamp"].forEach(id => {
         preencherSelect(id, camps, "Campeonato");
         if (!$(id).value) $(id).value = estado.camp;
       });
-      preencherSelect("edMandante", times, "Mandante");
-      preencherSelect("edVisitante", times, "Visitante");
 
       if (document.activeElement !== $("cfgPrazo")) $("cfgPrazo").value = d.config.prazoMin;
       if (document.activeElement !== $("cfgValor")) $("cfgValor").value = d.config.valorEntrada;
@@ -1611,7 +1660,7 @@
       }));
 
       desenharResultados();
-      preencherSelect("edJogoSel", jogos, "Escolha a partida");
+      desenharRodadasAdm();
       preencherSelect("horarioJogo", jogos.filter(j => {
         const jogo = d.jogos.find(x => String(x.id) === String(j.value));
         return jogo && jogo.status !== "ENCERRADO";
@@ -2044,48 +2093,159 @@ vitoria|Vitória|#e31b23|#140b0c|#ffffff`.split("\n").forEach(l => {
       if (confirm("Apagar este aviso?")) await acao("apagarAviso", id);
     }
 
-    function preencherEdicaoJogo() {
-      const j = estado.dados.jogos.find(x => String(x.id) === $("edJogoSel").value);
-      if (!j) return;
-      $("edCamp").value = j.campeonatoId;
-      $("edRodada").value = j.rodada;
-      $("edMandante").value = j.mandanteId;
-      $("edVisitante").value = j.visitanteId;
-      dtpDefinir("edData", String(j.dataHora).slice(0, 16));
-    }
-    $("edJogoSel").addEventListener("change", preencherEdicaoJogo);
+    /* ===== Rodadas e partidas (admin) ===== */
+    const RODADA = { camp: "", rodada: "", editando: "" };
 
-    $("formEditarJogo").addEventListener("submit", async e => {
+    function cardJogoRodada(j) {
+      const q = quando(j);
+      const enc = j.status === "ENCERRADO";
+      return `<article class="jogo compacto">
+        <div class="jogoTopo"><span>${textoSeguro(q.dia)} · ${textoSeguro(q.hora)}</span>
+          <span class="tag">${enc ? j.golsMandante + " × " + j.golsVisitante : "sem resultado"}</span></div>
+        <div class="confronto">
+          <div class="time">${escudoHtml(j.escudoMandante)}<span class="sigla">${textoSeguro(j.mandanteSigla)}</span></div>
+          <div class="muted">×</div>
+          <div class="time">${escudoHtml(j.escudoVisitante)}<span class="sigla">${textoSeguro(j.visitanteSigla)}</span></div>
+        </div>
+        <div class="botoes"><button type="button" class="secundario pequeno" data-editar="${textoSeguro(j.id)}">Editar</button></div>
+      </article>`;
+    }
+
+    function desenharRodadasAdm() {
+      const d = estado.dados;
+      const camps = d.campeonatos || [];
+      if (!camps.some(c => String(c.id) === String(RODADA.camp))) {
+        RODADA.camp = estado.camp || (camps[0] ? camps[0].id : "");
+        RODADA.rodada = "";
+      }
+      preencherSelect("rodCamp", camps.map(c => ({ value: c.id, texto: c.nome })), "Campeonato");
+      $("rodCamp").value = RODADA.camp;
+
+      const todos = d.jogos.filter(j => String(j.campeonatoId) === String(RODADA.camp));
+      const rods = [...new Set(todos.map(j => Number(j.rodada)))].sort((a, b) => a - b);
+      if (!rods.includes(Number(RODADA.rodada))) {
+        const pend = todos.filter(j => j.status !== "ENCERRADO").map(j => Number(j.rodada)).sort((a, b) => a - b)[0];
+        RODADA.rodada = pend != null ? pend : (rods.length ? rods[rods.length - 1] : "");
+      }
+
+      $("rodChips").innerHTML = rods.length ? rods.map(r => {
+        const feita = todos.filter(j => Number(j.rodada) === r).every(j => j.status === "ENCERRADO");
+        return `<button type="button" class="chip ${r === Number(RODADA.rodada) ? "ativa" : ""}" data-r="${r}">R${r}${feita ? " ✓" : ""}</button>`;
+      }).join("") : '<span class="muted">Nenhuma rodada neste campeonato.</span>';
+
+      const doDia = todos.filter(j => Number(j.rodada) === Number(RODADA.rodada))
+        .sort((a, b) => new Date(a.dataHora) - new Date(b.dataHora));
+      $("rodLista").innerHTML = doDia.map(cardJogoRodada).join("") ||
+        '<div class="vazio">Sem partidas nesta rodada. Use “+ Novo jogo”.</div>';
+
+      $("btnRodApagar").classList.toggle("oculto", !doDia.length);
+      $("btnRodNovo").classList.toggle("oculto", !RODADA.rodada);
+    }
+
+    function abrirEditorJogo(id) {
+      const d = estado.dados;
+      const times = d.times.map(t => ({ value: t.id, texto: t.sigla + " — " + t.nome }));
+      preencherSelect("rodMandante", times, "Mandante");
+      preencherSelect("rodVisitante", times, "Visitante");
+
+      const j = id === "novo" ? null : d.jogos.find(x => String(x.id) === String(id));
+      RODADA.editando = id;
+      const enc = !!(j && j.status === "ENCERRADO");
+
+      $("rodTitulo").textContent = j
+        ? "Editando: " + j.mandanteSigla + " × " + j.visitanteSigla + " · R" + j.rodada
+        : "Novo jogo · R" + RODADA.rodada;
+      $("rodRodada").value = j ? j.rodada : RODADA.rodada;
+      $("rodMandante").value = j ? j.mandanteId : "";
+      $("rodVisitante").value = j ? j.visitanteId : "";
+      dtpDefinir("rodData", j ? String(j.dataHora).slice(0, 16) : "");
+      $("rodGM").value = enc ? j.golsMandante : "";
+      $("rodGV").value = enc ? j.golsVisitante : "";
+
+      $("boxPlacarRod").classList.toggle("oculto", !j);
+      $("btnRodReabrir").classList.toggle("oculto", !enc);
+      $("btnRodExcluir").classList.toggle("oculto", !j);
+      $("formRodada").classList.remove("oculto");
+      $("formRodada").scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+
+    function fecharEditorJogo() {
+      RODADA.editando = "";
+      $("formRodada").classList.add("oculto");
+    }
+
+    $("rodCamp").addEventListener("change", e => {
+      RODADA.camp = e.target.value; RODADA.rodada = ""; fecharEditorJogo();
+      desenharRodadasAdm();
+    });
+    $("rodChips").addEventListener("click", e => {
+      const b = e.target.closest(".chip");
+      if (!b) return;
+      RODADA.rodada = Number(b.dataset.r); fecharEditorJogo();
+      desenharRodadasAdm();
+    });
+    $("rodLista").addEventListener("click", e => {
+      const b = e.target.closest("[data-editar]");
+      if (b) abrirEditorJogo(b.dataset.editar);
+    });
+    $("btnRodNovo").addEventListener("click", () => abrirEditorJogo("novo"));
+    $("btnRodCancelar").addEventListener("click", fecharEditorJogo);
+
+    $("formRodada").addEventListener("submit", async e => {
       e.preventDefault();
+      const id = RODADA.editando;
+      if (!id) return;
+      const gm = $("rodGM").value, gv = $("rodGV").value;
       try {
-        await executar("editarJogo", estado.token, $("edJogoSel").value,
-          $("edRodada").value, $("edMandante").value, $("edVisitante").value,
-          $("edData").value, $("edCamp").value);
+        if (id === "novo") {
+          await executar("cadastrarJogo", estado.token, $("rodRodada").value,
+            $("rodMandante").value, $("rodVisitante").value, $("rodData").value, RODADA.camp);
+        } else {
+          await executar("editarJogo", estado.token, id, $("rodRodada").value,
+            $("rodMandante").value, $("rodVisitante").value, $("rodData").value, RODADA.camp);
+          if (gm !== "" && gv !== "") {
+            await executar("registrarResultado", estado.token, id, gm, gv);
+          }
+        }
+        fecharEditorJogo();
         await atualizarDadosSemBloqueio();
-        mostrarMensagem("Partida atualizada.", "ok");
+        mostrarMensagem("Partida salva.", "ok");
       } catch (erro) {}
     });
 
-    $("btnExcluirJogo").addEventListener("click", async () => {
-      const id = $("edJogoSel").value;
-      if (!id) return mostrarMensagem("Escolha a partida.", "erro");
-      if (!confirm("Excluir esta partida e TODOS os palpites dela? Não dá para desfazer.")) return;
+    $("btnRodReabrir").addEventListener("click", async () => {
+      const id = RODADA.editando;
+      if (!id || !confirm("Desfazer o resultado desta partida?")) return;
+      try {
+        await executar("reabrirJogo", estado.token, id);
+        fecharEditorJogo();
+        await atualizarDadosSemBloqueio();
+        mostrarMensagem("Resultado desfeito.", "ok");
+      } catch (erro) {}
+    });
+
+    $("btnRodExcluir").addEventListener("click", async () => {
+      const id = RODADA.editando;
+      if (!id || !confirm("Excluir esta partida e TODOS os palpites dela? Não dá para desfazer.")) return;
       try {
         await executar("excluirJogo", estado.token, id);
-        $("formEditarJogo").reset();
+        fecharEditorJogo();
         await atualizarDadosSemBloqueio();
         mostrarMensagem("Partida excluída.", "ok");
       } catch (erro) {}
     });
 
-    $("btnReabrirJogo").addEventListener("click", async () => {
-      const id = $("edJogoSel").value;
-      if (!id) return mostrarMensagem("Escolha a partida.", "erro");
-      if (!confirm("Desfazer o resultado e reabrir esta partida?")) return;
+    $("btnRodApagar").addEventListener("click", async () => {
+      const n = estado.dados.jogos.filter(j => String(j.campeonatoId) === String(RODADA.camp) &&
+        Number(j.rodada) === Number(RODADA.rodada)).length;
+      if (!confirm("Apagar a rodada " + RODADA.rodada + " inteira (" + n +
+        " jogos) e todos os palpites deles?\n\nDepois você pode cadastrar o lote de novo.")) return;
       try {
-        await executar("reabrirJogo", estado.token, id);
+        const r = await executar("excluirRodada", estado.token, RODADA.camp, RODADA.rodada);
+        fecharEditorJogo();
+        RODADA.rodada = "";
         await atualizarDadosSemBloqueio();
-        mostrarMensagem("Partida reaberta.", "ok");
+        mostrarMensagem("Rodada apagada: " + r.jogos + " jogo(s) e " + r.palpitesApagados + " palpite(s).", "ok");
       } catch (erro) {}
     });
 
@@ -2379,18 +2539,48 @@ vitoria|Vitória|#e31b23|#140b0c|#ffffff`.split("\n").forEach(l => {
       } catch (e) { /* silencioso: o indicador só fica sem número */ }
     }
 
+    // "18/11/2026 05:21" -> "qua 18/11 · 05:21"
+    function formatarDataAcesso(txt) {
+      const m = String(txt || "").match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}:\d{2})$/);
+      if (!m) return String(txt || "");
+      const d = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+      const dia = d.toLocaleDateString("pt-BR", { weekday: "short" }).replace(/\./g, "");
+      return dia + " " + m[1] + "/" + m[2] + " · " + m[4];
+    }
+
+    const MESES_TELA = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+
+    // Aceita o formato novo (meses) e o antigo (lista de datas).
+    function mesesDoAcesso(p) {
+      if (Array.isArray(p.meses)) return p.meses;
+      const g = {};
+      (p.datas || []).forEach(d => {
+        const mm = String(d).slice(3, 5), yyyy = String(d).slice(6, 10);
+        const k = yyyy + "-" + mm;
+        if (!g[k]) g[k] = { rotulo: (MESES_TELA[Number(mm) - 1] || mm) + " de " + yyyy, datas: [] };
+        g[k].datas.push(d);
+      });
+      return Object.keys(g).sort().reverse().map(k => ({
+        rotulo: g[k].rotulo, total: g[k].datas.length, datas: g[k].datas
+      }));
+    }
+
     function desenharAcessos(r) {
       r = { total: r.total || 0, porNome: r.porNome || [] };
       $("btnStatusAcessos").textContent = "👁 Acessos: " + r.total;
       $("resumoAcessos").textContent = r.total + " entrada(s) · " +
-        r.porNome.length + " participante(s) já entraram. Toque no nome para ver as datas.";
+        r.porNome.length + " participante(s). Toque no nome para ver por mês.";
       $("porNomeAcessos").innerHTML = r.porNome.length
         ? r.porNome.map(p => `<details class="bloco">
             <summary><span>${textoSeguro(p.nome)}</span>
-              <span class="muted">${p.entradas}x · última ${textoSeguro(p.ultima)}</span></summary>
-            <div class="corpo">${p.datas.map(d =>
-              `<div class="linha" style="padding:5px 0"><span class="muted">${textoSeguro(d)}</span></div>`
-            ).join("")}</div>
+              <span class="muted">${p.entradas}x - última ${textoSeguro(formatarDataAcesso(p.ultima))}</span></summary>
+            <div class="corpo">${mesesDoAcesso(p).map(m => `<details class="bloco" style="margin:6px 0">
+                <summary><span>${textoSeguro(m.rotulo)}</span>
+                  <span class="muted">${m.total} entrada(s)</span></summary>
+                <div class="corpo">${m.datas.map(d =>
+                  `<div class="linha" style="padding:5px 0"><span class="muted">${textoSeguro(formatarDataAcesso(d))}</span></div>`
+                ).join("")}</div>
+              </details>`).join("")}</div>
           </details>`).join("")
         : '<div class="vazio">Nenhum acesso registrado ainda.</div>';
     }
@@ -2628,7 +2818,7 @@ vitoria|Vitória|#e31b23|#140b0c|#ffffff`.split("\n").forEach(l => {
     const ADM_GRUPOS = {
       "Adicionar time": "times", "Editar time": "times",
       "Cadastrar jogo": "jogos", "Cadastrar jogos em lote": "jogos",
-      "Editar ou excluir partida": "jogos",
+      "Rodadas e partidas": "jogos", "Editar ou excluir partida": "jogos",
       "Registrar resultado": "resultados",
       "Participantes": "participantes", "Quem ainda não palpitou": "participantes",
       "Palpites registrados": "participantes",
@@ -2667,6 +2857,6 @@ vitoria|Vitória|#e31b23|#140b0c|#ffffff`.split("\n").forEach(l => {
       }
     })();
   </script>
-  <footer id="versaoApp" class="muted" style="text-align:center;font-size:12px;padding:18px 0 28px">V5 · 18/11/26</footer>
+  <footer id="versaoApp" class="muted" style="text-align:center;font-size:12px;padding:18px 0 28px">V8 · 18/11/26</footer>
 </body>
 </html>
