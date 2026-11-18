@@ -206,16 +206,20 @@
 
     .abas {
       display: flex;
-      gap: 8px;
+      gap: 6px;
       overflow-x: auto;
-      padding-bottom: 12px;
-      margin-bottom: 12px;
+      padding-bottom: 8px;
+      margin-bottom: 10px;
+      scrollbar-width: none;
     }
+    .abas::-webkit-scrollbar { display: none; }
 
     .abaBotao {
       white-space: nowrap;
       border-radius: 999px;
-      padding: 10px 16px;
+      padding: 6px 11px;
+      font-size: 13px;
+      line-height: 1.2;
       background: var(--painel2);
       color: var(--texto);
       border: 1px solid var(--borda);
@@ -533,9 +537,10 @@
       <nav class="abas">
         <button class="abaBotao ativa" data-aba="jogos">⚽ Jogos</button>
         <button class="abaBotao" data-aba="ranking">🏆 Ranking</button>
-        <button class="abaBotao" data-aba="meus">📝 Meus palpites</button>
-        <button class="abaBotao" data-aba="conta">🔐 Minha conta</button>
-        <button class="abaBotao oculto" id="abaAdmin" data-aba="admin">⚙️ Administração</button>
+        <button class="abaBotao" data-aba="meus">📝 Palpites</button>
+        <button class="abaBotao" data-aba="p2p">🎮 P2P</button>
+        <button class="abaBotao" data-aba="conta">👤 Conta</button>
+        <button class="abaBotao oculto" id="abaAdmin" data-aba="admin">⚙️ Admin</button>
       </nav>
 
       <section id="painelJogos" class="painelAba">
@@ -602,6 +607,36 @@
       </section>
 
       <!-- ADMINISTRAÇÃO -->
+      <section id="painelP2p" class="painelAba oculto">
+        <div class="card" style="text-align:center;padding:26px 18px">
+          <svg viewBox="0 0 120 120" width="112" height="112" aria-hidden="true" style="margin:0 auto 6px;display:block">
+            <circle cx="60" cy="60" r="56" fill="var(--painel2)" stroke="var(--borda)" stroke-width="2"/>
+            <path d="M40 30h40v22c0 13-9 23-20 23s-20-10-20-23V30z" fill="var(--verde)"/>
+            <path d="M40 38H30c0 12 6 18 12 19M80 38h10c0 12-6 18-12 19" fill="none" stroke="var(--verde)" stroke-width="5" stroke-linecap="round"/>
+            <rect x="54" y="75" width="12" height="13" fill="var(--verde)"/>
+            <rect x="42" y="88" width="36" height="8" rx="3" fill="var(--verde)"/>
+          </svg>
+          <div class="tag" style="margin-bottom:10px">EM BREVE</div>
+          <h2 style="margin:4px 0">Campeonato P2P</h2>
+          <p class="muted" style="margin:0 auto;max-width:420px">
+            Um campeonato de jogadores, em que cada participante monta um time com times do Brasileirão.
+          </p>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-top:0">Como vai funcionar</h3>
+          <div class="linha" style="padding:8px 0"><span>👥 Grupos de 4 jogadores</span></div>
+          <div class="linha" style="padding:8px 0"><span>⚽ Cada um escolhe seus times do Brasileirão</span></div>
+          <div class="linha" style="padding:8px 0"><span>🙈 Os confrontos ficam ocultos até o bloqueio</span></div>
+          <div class="linha" style="padding:8px 0"><span>🔁 Troca de titular antes de cada fase</span></div>
+          <div class="linha" style="padding:8px 0"><span>🥊 Repescagem entre os eliminados</span></div>
+        </div>
+
+        <div class="card" style="text-align:center">
+          <div class="muted">Mais detalhes em breve.</div>
+        </div>
+      </section>
+
       <section id="painelAdmin" class="painelAba oculto">
         <div class="card">
           <h2>⚙️ Administração</h2>
