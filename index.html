@@ -554,6 +554,7 @@
           <select id="filtroRodada" class="oculto">
             <option value="">Todas as rodadas</option>
           </select>
+          <div id="avisoPendentes" class="card oculto" style="border:2px solid var(--vermelho)"></div>
           <div id="avisoLembrete" class="card oculto"></div>
           <div id="listaJogos"></div>
         </div>
@@ -576,7 +577,16 @@
               <h3 style="margin:0">🏆 Hall da Fama</h3>
               <span id="tagHall" class="tag oculto">OCULTO PARA MEMBROS</span>
             </div>
-            <p class="muted" style="margin:10px 0 0">Campeões e vices por campeonato. Em preparação.</p>
+            <div id="hallConteudo" style="margin-top:10px"></div>
+            <div id="hallAdmin" class="oculto" style="margin-top:12px;border-top:1px solid var(--borda);padding-top:12px">
+              <label>Campeão
+                <select id="hallCampeao"></select>
+              </label>
+              <label>Vice
+                <select id="hallVice"></select>
+              </label>
+              <div class="botoes"><button type="button" id="btnHallSalvar" class="pequeno">Salvar campeão e vice</button></div>
+            </div>
           </div>
         </div>
       </section>
@@ -753,6 +763,14 @@
             <label>Rodada
               <input id="rodRodada" type="number" min="1" required>
             </label>
+            <label>Fase (opcional)
+              <input id="rodFase" list="listaFases" placeholder="Ex.: Quartas, Semi, Final" autocomplete="off">
+            </label>
+            <datalist id="listaFases">
+              <option value="Oitavas"></option><option value="Quartas"></option>
+              <option value="Semifinal"></option><option value="Final"></option>
+              <option value="Terceiro lugar"></option>
+            </datalist>
             <label>Mandante
               <select id="rodMandante" required></select>
             </label>
@@ -1258,7 +1276,7 @@
               <span><strong>${textoSeguro(j.mandanteSigla)}</strong>
                 <strong class="verde">${j.golsMandante} × ${j.golsVisitante}</strong>
                 <strong>${textoSeguro(j.visitanteSigla)}</strong>
-                <span class="muted"> · R${j.rodada}</span></span>
+                <span class="muted"> · ${textoSeguro(j.fase || "R" + j.rodada)}</span></span>
               ${meu ? `<span class="tag">${textoSeguro(meu)}</span>` : ""}
             </div>
             ${palpitesDoJogoHtml(j)}
@@ -1272,7 +1290,7 @@
         return `
           <article class="jogo ${idsSujos.has(String(j.id)) ? "alterado" : ""}" id="jogo_${j.id}">
             <div class="jogoTopo">
-              <span>Rodada ${j.rodada}</span>
+              <span>${textoSeguro(j.fase || "Rodada " + j.rodada)}</span>
               <span>📅 ${q.dia} · ⏰ <strong style="color:var(--texto);font-size:15px">${q.hora}</strong></span>
             </div>
             <div class="confronto">
@@ -1381,7 +1399,36 @@
       $("tagHall").classList.toggle("oculto", ativo || !ehAdm);
       const b = $("btnHallAtivo");
       if (b) b.textContent = ativo ? "Desativar Hall da Fama" : "Ativar Hall da Fama";
+
+      const camp = estado.camp;
+      const h = ((d.config && d.config.hallCampeoes) || {})[String(camp)] || {};
+      $("hallConteudo").innerHTML =
+        (h.campeao ? '<div class="linha" style="padding:6px 0"><span>🥇 Campeão</span><strong>' + textoSeguro(h.campeao.nome) + '</strong></div>' : '<div class="muted">Campeão ainda não definido.</div>') +
+        (h.vice ? '<div class="linha" style="padding:6px 0"><span>🥈 Vice</span><strong>' + textoSeguro(h.vice.nome) + '</strong></div>' : '');
+
+      $("hallAdmin").classList.toggle("oculto", !ehAdm);
+      if (ehAdm && !$("hallCampeao").options.length) {
+        const opc = (d.usuarios || []).filter(x => x.perfil !== "ADMIN")
+          .map(x => '<option value="' + textoSeguro(x.id) + '">' + textoSeguro(x.nome) + '</option>').join("");
+        $("hallCampeao").innerHTML = '<option value="">—</option>' + opc;
+        $("hallVice").innerHTML = '<option value="">—</option>' + opc;
+      }
+      if (ehAdm) {
+        $("hallCampeao").value = h.campeao ? h.campeao.id : "";
+        $("hallVice").value = h.vice ? h.vice.id : "";
+      }
     }
+
+    $("btnHallSalvar").addEventListener("click", async () => {
+      const camp = estado.camp;
+      const c = $("hallCampeao").value, v = $("hallVice").value;
+      if (c && v && c === v) return mostrarMensagem("Campeão e vice não podem ser a mesma pessoa.", "erro");
+      try {
+        await executar("definirCampeaoHall", estado.token, camp, c, v);
+        await atualizarDadosSemBloqueio();
+        mostrarMensagem("Campeão e vice salvos.", "ok");
+      } catch (erro) {}
+    });
 
     $("btnHallAtivo") && $("btnHallAtivo").addEventListener("click", async () => {
       const atual = !!(estado.dados.config && estado.dados.config.hallAtivo);
@@ -1393,8 +1440,24 @@
       } catch (erro) {}
     });
 
+    // Alerta público: quem ainda não palpitou na próxima rodada.
+    function atualizarAvisoPendentes() {
+      const box = $("avisoPendentes");
+      if (!box) return;
+      const d = estado.dados;
+      const lista = (d && d.pendentes) || [];
+      if (!lista.length) { box.classList.add("oculto"); return; }
+      box.innerHTML = '<div style="font-weight:900;color:var(--vermelho);letter-spacing:.5px">⚠️ ALERTA · RODADA ' +
+        textoSeguro(d.pendentesRodada) + '</div>' +
+        '<div class="muted" style="margin:6px 0">Ainda sem palpite. Cobra o colega!</div>' +
+        lista.map(p => '<div class="linha" style="padding:5px 0"><strong>' + textoSeguro(p.nome) +
+          '</strong><span class="muted">faltam ' + p.faltam + '</span></div>').join("");
+      box.classList.remove("oculto");
+    }
+
     function atualizarBarra() {
       atualizarLembrete();
+      atualizarAvisoPendentes();
       atualizarHall();
       const n = estado.dados && estado.usuario && estado.usuario.perfil !== "ADMIN"
         ? sujosRodada().length : 0;
@@ -2158,6 +2221,7 @@ vitoria|Vitória|#e31b23|#140b0c|#ffffff`.split("\n").forEach(l => {
       $("rodRodada").value = j ? j.rodada : RODADA.rodada;
       $("rodMandante").value = j ? j.mandanteId : "";
       $("rodVisitante").value = j ? j.visitanteId : "";
+      $("rodFase").value = j ? (j.fase || "") : "";
       dtpDefinir("rodData", j ? String(j.dataHora).slice(0, 16) : "");
       $("rodGM").value = enc ? j.golsMandante : "";
       $("rodGV").value = enc ? j.golsVisitante : "";
@@ -2199,10 +2263,10 @@ vitoria|Vitória|#e31b23|#140b0c|#ffffff`.split("\n").forEach(l => {
       try {
         if (id === "novo") {
           await executar("cadastrarJogo", estado.token, $("rodRodada").value,
-            $("rodMandante").value, $("rodVisitante").value, $("rodData").value, RODADA.camp);
+            $("rodMandante").value, $("rodVisitante").value, $("rodData").value, RODADA.camp, $("rodFase").value.trim());
         } else {
           await executar("editarJogo", estado.token, id, $("rodRodada").value,
-            $("rodMandante").value, $("rodVisitante").value, $("rodData").value, RODADA.camp);
+            $("rodMandante").value, $("rodVisitante").value, $("rodData").value, RODADA.camp, $("rodFase").value.trim());
           if (gm !== "" && gv !== "") {
             await executar("registrarResultado", estado.token, id, gm, gv);
           }
@@ -2857,6 +2921,6 @@ vitoria|Vitória|#e31b23|#140b0c|#ffffff`.split("\n").forEach(l => {
       }
     })();
   </script>
-  <footer id="versaoApp" class="muted" style="text-align:center;font-size:12px;padding:18px 0 28px">V8 · 18/11/26</footer>
+  <footer id="versaoApp" class="muted" style="text-align:center;font-size:12px;padding:18px 0 28px">V9 · 20/11/26</footer>
 </body>
 </html>
