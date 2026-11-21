@@ -492,9 +492,9 @@
             <input id="cadNome" minlength="2" maxlength="60" required>
           </label>
 
-          <label>Crie um PIN de 4 a 8 números
+          <label>Crie um PIN de 6 a 8 números
             <input id="cadPin" type="password" inputmode="numeric"
-              minlength="4" maxlength="8" required>
+              minlength="6" maxlength="8" required>
           </label>
 
           <label>Repita seu PIN
@@ -617,9 +617,9 @@
             <label>PIN atual
               <input id="pinAtual" type="password" inputmode="numeric" required>
             </label>
-            <label>Novo PIN (4 a 8 números)
+            <label>Novo PIN (6 a 8 números)
               <input id="pinNovo" type="password" inputmode="numeric"
-                minlength="4" maxlength="8" required>
+                minlength="6" maxlength="8" required>
             </label>
             <label>Repita o novo PIN
               <input id="pinNovo2" type="password" inputmode="numeric"
@@ -730,6 +730,15 @@
             </label>
             <button type="submit">Criar campeonato</button>
           </form>
+          <form id="formEditCamp" style="margin-top:14px;border-top:1px solid var(--borda);padding-top:12px">
+            <label>Editar campeonato
+              <select id="campEditSel"></select>
+            </label>
+            <label>Novo nome
+              <input id="campEditNome" placeholder="Nome do campeonato" required>
+            </label>
+            <div class="botoes"><button type="submit" class="pequeno">Salvar nome</button></div>
+          </form>
           <div style="margin:6px 0 18px">
             <div class="muted">Hall da Fama (aparece na aba Ranking para os membros)</div>
             <button type="button" id="btnHallAtivo" class="secundario pequeno" style="margin-top:6px">Ativar Hall da Fama</button>
@@ -742,6 +751,29 @@
               <button type="button" class="pequeno secundario" id="btnConviteZap">Mensagem pronta (WhatsApp)</button>
             </div>
           </div>
+          <div style="margin:6px 0 18px;padding:12px;border:1px solid var(--borda);border-radius:14px">
+            <h3 style="margin:0 0 6px">Convite e limite de participantes</h3>
+            <div class="muted" id="cfgVagas" style="margin-bottom:8px"></div>
+            <form id="formConvite">
+              <label>Código de convite
+                <input id="cfgConvite" autocomplete="off" required minlength="4" maxlength="30">
+              </label>
+              <label>Limite de participantes
+                <input id="cfgLimite" type="number" min="1" max="500" required>
+              </label>
+              <div class="botoes"><button type="submit" class="pequeno">Salvar convite e limite</button></div>
+            </form>
+          </div>
+
+          <div style="margin:6px 0 18px;padding:12px;border:1px solid var(--borda);border-radius:14px">
+            <h3 style="margin:0 0 6px">Backup da planilha</h3>
+            <div class="muted" id="cfgBackupStatus" style="margin-bottom:8px">Verificando...</div>
+            <div class="botoes">
+              <button type="button" id="btnBackupAgora" class="pequeno">Fazer backup agora</button>
+              <button type="button" id="btnBackupSemanal" class="secundario pequeno">Backup semanal: ligar</button>
+            </div>
+          </div>
+
           <form id="formConfig" style="margin-top:18px">
             <label>Fechar palpites quantos minutos antes do jogo?
               <input id="cfgPrazo" type="number" min="0" max="180" required>
@@ -1128,6 +1160,9 @@
       estado.usuario = resposta.usuario;
       guardar.salvar(estado.token);
       await carregar();
+      if (resposta.trocarPin) {
+        mostrarMensagem("Seu PIN tem menos de 6 números. Troque na aba 👤 Conta, por favor.", "erro");
+      }
     }
 
     async function carregar() {
@@ -1809,7 +1844,15 @@
                </div>` : ""}
         </div>`).join("") || '<div class="vazio">Nenhum participante.</div>';
 
+      const campsEd = d.campeonatos || [];
+      const selEd = $("campEditSel");
+      const anteriorEd = selEd.value;
+      selEd.innerHTML = campsEd.map(c => `<option value="${textoSeguro(c.id)}">${textoSeguro(c.nome)}</option>`).join("");
+      selEd.value = campsEd.some(c => String(c.id) === anteriorEd) ? anteriorEd : (campsEd[0] ? campsEd[0].id : "");
+      if (!$("campEditNome").value && campsEd[0]) $("campEditNome").value = campsEd[0].nome;
       desenharPalpitesAdmin();
+      atualizarConviteBackup();
+      atualizarStatusBackup();
 
       const cod = (d.config && d.config.convite) || "";
       if (document.activeElement !== $("linkConvite")) {
@@ -1820,7 +1863,7 @@
     async function redefinirPinTela(id) {
       const u = (estado.dados.usuarios || []).find(x => String(x.id) === String(id));
       const pin = prompt("Novo PIN para " + (u ? u.nome : "o participante") +
-        " (4 a 8 números):");
+        " (6 a 8 números):");
       if (pin === null) return;
       await acao("redefinirPin", id, pin.trim());
     }
@@ -2364,6 +2407,22 @@ vitoria|Vitória|#e31b23|#140b0c|#ffffff`.split("\n").forEach(l => {
       } catch (erro) {}
     });
 
+    $("campEditSel").addEventListener("change", e => {
+      const c = (estado.dados.campeonatos || []).find(x => String(x.id) === e.target.value);
+      $("campEditNome").value = c ? c.nome : "";
+    });
+
+    $("formEditCamp").addEventListener("submit", async e => {
+      e.preventDefault();
+      const id = $("campEditSel").value;
+      if (!id) return;
+      try {
+        await executar("editarCampeonato", estado.token, id, $("campEditNome").value);
+        await atualizarDadosSemBloqueio();
+        mostrarMensagem("Nome do campeonato alterado.", "ok");
+      } catch (erro) {}
+    });
+
     $("formCamp").addEventListener("submit", async e => {
       e.preventDefault();
       try {
@@ -2371,6 +2430,52 @@ vitoria|Vitória|#e31b23|#140b0c|#ffffff`.split("\n").forEach(l => {
         $("formCamp").reset();
         await atualizarDadosSemBloqueio();
         mostrarMensagem("Campeonato criado.", "ok");
+      } catch (erro) {}
+    });
+
+    function atualizarConviteBackup() {
+      const d = estado.dados;
+      if (!d || d.usuario.perfil !== "ADMIN") return;
+      const limite = (d.config && d.config.limiteParticipantes) || 15;
+      const ativos = (d.usuarios || []).filter(u => u.perfil !== "ADMIN" && u.ativo).length;
+      $("cfgVagas").textContent = ativos + " de " + limite + " vagas usadas";
+      if (document.activeElement !== $("cfgConvite")) $("cfgConvite").value = (d.config && d.config.convite) || "";
+      if (document.activeElement !== $("cfgLimite")) $("cfgLimite").value = limite;
+    }
+
+    async function atualizarStatusBackup() {
+      try {
+        const r = await chamarServidor("statusBackup", estado.token);
+        $("cfgBackupStatus").textContent = (r.ativo ? "Semanal: LIGADO" : "Semanal: desligado") +
+          (r.ultimo ? " · último backup: " + r.ultimo : " · ainda não há backup");
+        $("btnBackupSemanal").textContent = r.ativo ? "Backup semanal: desligar" : "Backup semanal: ligar";
+        $("btnBackupSemanal").dataset.ativo = r.ativo ? "1" : "0";
+      } catch (e) {}
+    }
+
+    $("formConvite").addEventListener("submit", async e => {
+      e.preventDefault();
+      try {
+        await executar("definirConvite", estado.token, $("cfgConvite").value, $("cfgLimite").value);
+        await atualizarDadosSemBloqueio();
+        mostrarMensagem("Convite e limite salvos.", "ok");
+      } catch (erro) {}
+    });
+
+    $("btnBackupAgora").addEventListener("click", async () => {
+      try {
+        const r = await executar("fazerBackupAgora", estado.token);
+        mostrarMensagem("Backup criado: " + r.nome, "ok");
+        atualizarStatusBackup();
+      } catch (erro) {}
+    });
+
+    $("btnBackupSemanal").addEventListener("click", async () => {
+      const ligado = $("btnBackupSemanal").dataset.ativo === "1";
+      try {
+        await executar(ligado ? "desativarBackupSemanal" : "ativarBackupSemanal", estado.token);
+        mostrarMensagem(ligado ? "Backup semanal desligado." : "Backup semanal ligado (segunda, 4h).", "ok");
+        atualizarStatusBackup();
       } catch (erro) {}
     });
 
@@ -2972,6 +3077,6 @@ vitoria|Vitória|#e31b23|#140b0c|#ffffff`.split("\n").forEach(l => {
       }
     })();
   </script>
-  <footer id="versaoApp" class="muted" style="text-align:center;font-size:12px;padding:18px 0 28px">V12 · 20/11/26</footer>
+  <footer id="versaoApp" class="muted" style="text-align:center;font-size:12px;padding:18px 0 28px">V14 · 21/11/26</footer>
 </body>
 </html>
