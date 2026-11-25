@@ -844,6 +844,9 @@
               <textarea id="avisoTexto" rows="3" maxlength="500" required
                 style="width:100%;padding:12px;border:1px solid var(--borda);border-radius:9px;color:var(--texto);background:var(--campo);font:inherit"></textarea>
             </label>
+            <label>Imagem do aviso (opcional, link https://)
+              <input id="avisoImagem" type="url" placeholder="https://..." autocomplete="off">
+            </label>
             <button type="submit">Publicar aviso</button>
           </form>
           <div id="listaAvisosAdmin" style="margin-top:12px"></div>
@@ -1537,7 +1540,7 @@
         textoSeguro(d.pendentesRodada) + '</div>' +
         '<div class="muted" style="margin:6px 0">Ainda sem palpite. Cobra o colega!</div>' +
         lista.map(p => '<div class="linha" style="padding:5px 0"><strong>' + textoSeguro(p.nome) +
-          '</strong><span class="muted">faltam ' + p.faltam + '</span></div>').join("");
+          '</strong><span class="muted">faltam ' + p.faltam + (estado.usuario && estado.usuario.perfil === 'ADMIN' ? ' · ' + p.total + ' no total' : '') + '</span></div>').join("");
       box.classList.remove("oculto");
     }
 
@@ -1818,7 +1821,7 @@
       $("listaPendentes").innerHTML = (d.pendentes || []).map(p => `
         <div class="linha">
           <strong>${textoSeguro(p.nome)}</strong>
-          <span class="muted">faltam ${p.faltam} jogo(s)</span>
+          <span class="muted">faltam ${p.faltam} nesta rodada · ${p.total} no total</span>
         </div>`).join("") ||
         '<div class="vazio">Todo mundo está em dia. 🎉</div>';
 
@@ -2095,7 +2098,8 @@
     function desenharMural() {
       $("muralAvisos").innerHTML = (estado.dados.avisos || []).map(a => `
         <div class="aviso" style="border-left:4px solid var(--verde)">
-          📢 ${textoSeguro(a.texto)}
+          ${a.texto ? "📢 " + textoSeguro(a.texto) : ""}
+          ${a.imagem ? `<img src="${textoSeguro(a.imagem)}" alt="Imagem do aviso" loading="lazy" style="display:block;width:100%;height:auto;border-radius:12px;margin-top:8px">` : ""}
           <div class="muted" style="margin-top:6px">${textoSeguro(a.data)}</div>
         </div>`).join("");
     }
@@ -2491,7 +2495,7 @@ vitoria|Vitória|#e31b23|#140b0c|#ffffff`.split("\n").forEach(l => {
     $("formAviso").addEventListener("submit", async e => {
       e.preventDefault();
       try {
-        await executar("criarAviso", estado.token, $("avisoTexto").value);
+        await executar("criarAviso", estado.token, $("avisoTexto").value, $("avisoImagem").value);
         $("formAviso").reset();
         await atualizarDadosSemBloqueio();
         mostrarMensagem("Aviso publicado.", "ok");
@@ -3077,6 +3081,6 @@ vitoria|Vitória|#e31b23|#140b0c|#ffffff`.split("\n").forEach(l => {
       }
     })();
   </script>
-  <footer id="versaoApp" class="muted" style="text-align:center;font-size:12px;padding:18px 0 28px">V14 · 21/11/26</footer>
+  <footer id="versaoApp" class="muted" style="text-align:center;font-size:12px;padding:18px 0 28px">V15 · 25/11/26</footer>
 </body>
 </html>
