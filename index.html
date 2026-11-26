@@ -430,6 +430,49 @@
     .podio3 .col { display:flex; flex-direction:column; align-items:center; gap:4px; width:104px; }
     .podio3 .bloco3 { width:100%; border-radius:12px 12px 0 0; display:flex; align-items:center; justify-content:center; font-size:26px; font-weight:500; color:#4a3a14; }
     .medalha3 { width:54px; height:70px; }
+    /* seletor de campeonato em vidro */
+    .campGlass { position: relative; width: 100%; }
+    .campGlass .gTrig {
+      width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      padding: 12px 16px; border-radius: 14px; cursor: pointer;
+      border: 1px solid var(--borda); background: var(--painel2); color: var(--texto);
+      font-weight: 700; letter-spacing: .3px; font-size: 14px;
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 8px 22px rgba(0,0,0,.18); transition: transform .12s ease, background .2s ease;
+    }
+    .campGlass .gTrig:active { transform: scale(.99); }
+    .campGlass .gSeta { transition: transform .25s ease; flex-shrink: 0; }
+    .campGlass.aberto .gSeta { transform: rotate(180deg); }
+    .campGlass .gMenu {
+      position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 40;
+      padding: 8px; border-radius: 16px; border: 1px solid var(--borda);
+      background: var(--painel); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 18px 40px rgba(0,0,0,.28);
+      opacity: 0; visibility: hidden; transform: translateY(-6px) scale(.98);
+      transition: opacity .2s ease, transform .2s ease, visibility .2s ease;
+    }
+    .campGlass.aberto .gMenu { opacity: 1; visibility: visible; transform: translateY(0) scale(1); }
+    .campGlass .gItem {
+      width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      padding: 11px 13px; margin-bottom: 6px; border-radius: 11px; cursor: pointer;
+      border: 1px solid var(--borda); background: var(--painel2); color: var(--texto);
+      font-size: 14px; font-weight: 600; letter-spacing: .2px;
+      transition: background .18s ease, border-color .18s ease, transform .12s ease;
+    }
+    .campGlass .gItem:last-child { margin-bottom: 0; }
+    .campGlass .gItem:hover { background: var(--campo); }
+    .campGlass .gItem:active { transform: scale(.99); }
+    .campGlass .gItem[aria-selected="true"] { border-color: var(--verde); color: var(--verde); }
+    .campGlass .gCheck {
+      width: 22px; height: 22px; border-radius: 999px; flex-shrink: 0;
+      display: grid; place-items: center; font-size: 12px; font-weight: 800;
+      border: 1.5px solid var(--borda); color: transparent;
+      transition: background .18s ease, border-color .18s ease, color .18s ease, transform .2s ease;
+    }
+    .campGlass .gItem[aria-selected="true"] .gCheck {
+      background: var(--verde); border-color: var(--verde); color: var(--on);
+      transform: scale(1.08);
+    }
   </style>
 </head>
 
@@ -534,7 +577,8 @@
       <div id="muralAvisos"></div>
       <div id="barraCamp" class="card oculto">
         <label style="margin:0">Campeonato
-          <select id="seletorCamp"></select>
+          <select id="seletorCamp" class="oculto"></select>
+          <div id="campGlass" class="campGlass"></div>
         </label>
       </div>
 
@@ -2086,6 +2130,64 @@
       ultimaAtividade = Date.now();
     }
 
+    // Seletor de vidro: mostra as mesmas opções do select escondido.
+    function montarCampGlass() {
+      const sel = $("seletorCamp"), box = $("campGlass");
+      if (!sel || !box) return;
+      const opcoes = Array.from(sel.options);
+      const atual = opcoes.find(o => o.value === sel.value) || opcoes[0];
+      if (!opcoes.length) { box.innerHTML = ""; return; }
+      box.innerHTML = `
+        <button type="button" class="gTrig" aria-haspopup="listbox" aria-expanded="false">
+          <span>${textoSeguro(atual ? atual.text : "Campeonato")}</span>
+          <svg class="gSeta" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <div class="gMenu" role="listbox">
+          ${opcoes.map(o => `
+            <button type="button" class="gItem" role="option" data-v="${textoSeguro(o.value)}"
+              aria-selected="${o.value === sel.value}">
+              <span>${textoSeguro(o.text)}</span>
+              <span class="gCheck" aria-hidden="true">✓</span>
+            </button>`).join("")}
+        </div>`;
+    }
+
+    function fecharCampGlass() {
+      const box = $("campGlass");
+      if (!box) return;
+      box.classList.remove("aberto");
+      const t = box.querySelector(".gTrig");
+      if (t) t.setAttribute("aria-expanded", "false");
+    }
+
+    $("campGlass").addEventListener("click", e => {
+      e.stopPropagation();
+      const box = $("campGlass");
+      const trig = e.target.closest(".gTrig");
+      const item = e.target.closest(".gItem");
+      if (trig) {
+        const abre = !box.classList.contains("aberto");
+        box.classList.toggle("aberto", abre);
+        trig.setAttribute("aria-expanded", String(abre));
+        return;
+      }
+      if (item) {
+        const sel = $("seletorCamp");
+        if (sel.value !== item.dataset.v) {
+          sel.value = item.dataset.v;
+          sel.dispatchEvent(new Event("change"));
+        }
+        fecharCampGlass();
+        montarCampGlass();
+      }
+    });
+
+    document.addEventListener("click", fecharCampGlass);
+    document.addEventListener("keydown", e => { if (e.key === "Escape") fecharCampGlass(); });
+
+    // Reconstrói o seletor sempre que as opções do campeonato mudarem.
+    new MutationObserver(montarCampGlass).observe($("seletorCamp"), { childList: true, subtree: true, attributes: true });
+
     $("seletorCamp").addEventListener("change", e => {
       estado.camp = e.target.value;
       estado.rodadaDefinida = false;
@@ -3081,6 +3183,6 @@ vitoria|Vitória|#e31b23|#140b0c|#ffffff`.split("\n").forEach(l => {
       }
     })();
   </script>
-  <footer id="versaoApp" class="muted" style="text-align:center;font-size:12px;padding:18px 0 28px">V15 · 25/11/26</footer>
+  <footer id="versaoApp" class="muted" style="text-align:center;font-size:12px;padding:18px 0 28px">V16 · 26/11/26</footer>
 </body>
 </html>
