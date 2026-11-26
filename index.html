@@ -1047,6 +1047,18 @@
     <button id="btnBaixarPrint" type="button" class="secundario" disabled>⬇️ Baixar</button>
   </div>
 
+  <div id="modalSeguranca" class="oculto" style="position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:18px">
+    <div class="card" style="max-width:420px;width:100%;border:2px solid var(--vermelho)">
+      <div style="font-size:12px;letter-spacing:1px;color:var(--vermelho);font-weight:900">🔐 SEGURANÇA DO BOLÃO</div>
+      <h2 id="segTitulo" style="margin:8px 0 10px">Troque sua senha até 30/11/2026</h2>
+      <p id="segTexto" class="muted" style="line-height:1.5"></p>
+      <div class="botoes">
+        <button type="button" id="btnSegConta" class="secundario">Ir para Conta</button>
+        <button type="button" id="btnSegOk">Entendi</button>
+      </div>
+    </div>
+  </div>
+
   <div id="toast"><span class="check"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span id="toastTexto"></span></div>
 
   <script>
@@ -1207,10 +1219,24 @@
       estado.usuario = resposta.usuario;
       guardar.salvar(estado.token);
       await carregar();
-      if (resposta.trocarPin) {
-        mostrarMensagem("Seu PIN tem menos de 6 números. Troque na aba 👤 Conta, por favor.", "erro");
-      }
+      mostrarAvisoSeguranca(resposta.trocarPin);
     }
+
+    // Aviso de segurança a cada login: prazo para trocar a senha (PIN).
+    function mostrarAvisoSeguranca(curto) {
+      $("segTexto").textContent =
+        "Para proteger sua conta e o bolão, o PIN precisa ter de 6 a 8 números. " +
+        "Troque até 30/11/2026, em 👤 Conta." +
+        (curto ? " Seu PIN atual tem menos de 6 números, então troque o quanto antes." : "") +
+        " Não compartilhe seu PIN com ninguém.";
+      $("modalSeguranca").classList.remove("oculto");
+    }
+
+    $("btnSegOk").addEventListener("click", () => $("modalSeguranca").classList.add("oculto"));
+    $("btnSegConta").addEventListener("click", () => {
+      $("modalSeguranca").classList.add("oculto");
+      document.querySelector('.abaBotao[data-aba="conta"]').click();
+    });
 
     async function carregar() {
       if (!estado.token) return;
@@ -3183,6 +3209,6 @@ vitoria|Vitória|#e31b23|#140b0c|#ffffff`.split("\n").forEach(l => {
       }
     })();
   </script>
-  <footer id="versaoApp" class="muted" style="text-align:center;font-size:12px;padding:18px 0 28px">V16 · 26/11/26</footer>
+  <footer id="versaoApp" class="muted" style="text-align:center;font-size:12px;padding:18px 0 28px">V17 · 26/11/26</footer>
 </body>
 </html>
