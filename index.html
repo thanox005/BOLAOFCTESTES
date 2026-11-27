@@ -591,10 +591,7 @@
             <button id="btnStatusAcessos" type="button" class="tag oculto"
               style="cursor:pointer;border:0;margin-left:6px" title="Ver registro de entradas">👁 Acessos</button>
           </div>
-          <div style="display:flex;gap:8px;align-items:center">
-            <button id="btnMeuPerfil" class="secundario pequeno oculto">👤 Meu perfil</button>
-            <button id="btnSair" class="secundario pequeno">Sair</button>
-          </div>
+          <button id="btnSair" class="secundario pequeno">Sair</button>
         </div>
       </div>
 
@@ -1093,6 +1090,7 @@
           <h2 id="perfilNome" style="margin:0"></h2>
           <div class="muted" id="perfilCurtidas"></div>
         </div>
+        <button id="btnEditarPerfil" class="secundario pequeno oculto" type="button" aria-label="Editar perfil" style="margin-left:auto">✏️</button>
         <button id="btnCurtir" class="perfilCurtir" type="button" aria-pressed="false" aria-label="Curtir">♡</button>
       </div>
 
@@ -1121,17 +1119,13 @@
         <div class="muted" id="perfilResumo" style="margin-top:8px;font-size:13px"></div>
       </div>
 
-      <button id="btnEditarPerfil" type="button" class="secundario pequeno oculto">Editar meu perfil</button>
-
       <div id="perfilEditar" class="oculto perfilSecao">
         <h3>Escolha seu avatar</h3>
         <div id="avGrade" class="avGrade"></div>
         <label>Sobre você (até 200 caracteres)
           <textarea id="perfilSobreEdit" rows="3" maxlength="200"></textarea>
         </label>
-        <label>Música
-          <select id="perfilSelMusica"></select>
-        </label>
+        <div class="muted" style="font-size:12px;margin-top:6px">Música: em breve.</div>
         <div class="botoes"><button type="button" id="btnSalvarPerfil">Salvar perfil</button></div>
       </div>
     </div>
@@ -1309,6 +1303,7 @@
       estado.usuario = resposta.usuario;
       guardar.salvar(estado.token);
       await carregar();
+      sessionStorage.removeItem("perfilInicialVisto");
       mostrarAvisoSeguranca(resposta.trocarPin);
     }
 
@@ -1368,6 +1363,7 @@
       $("perfilResumo").textContent = p.exatos + " placares exatos · " + quentes + " rodada(s) quente(s)";
 
       $("btnEditarPerfil").classList.toggle("oculto", !p.souEu);
+      $("btnCurtir").classList.toggle("oculto", !!p.souEu);
       $("perfilEditar").classList.add("oculto");
     }
 
@@ -1387,10 +1383,6 @@
       const l = e.target.closest("[data-perfil]");
       if (l) abrirPerfil(l.dataset.perfil);
     });
-    $("btnMeuPerfil").addEventListener("click", () => {
-      if (estado.usuario) abrirPerfil(estado.usuario.id);
-    });
-
     $("btnFecharPerfil").addEventListener("click", () => {
       $("btnMusica").textContent = "▶";
       $("audioPerfil").pause();
@@ -1420,8 +1412,6 @@
       $("avGrade").innerHTML = cat.avatares.length
         ? cat.avatares.map(u => `<button type="button" class="avItem" data-av="${textoSeguro(u)}" aria-selected="${u === PERFIL.avatar}" style="background-image:url('${textoSeguro(u)}')"></button>`).join("")
         : '<div class="muted">Nenhum avatar cadastrado ainda.</div>';
-      $("perfilSelMusica").innerHTML = '<option value="">Sem música</option>' +
-        cat.trilhas.map(t => `<option value="${textoSeguro(t.url)}" ${t.url === PERFIL.musica ? "selected" : ""}>${textoSeguro(t.nome)}</option>`).join("");
       $("perfilSobreEdit").value = PERFIL.sobre || "";
       $("perfilEditar").dataset.av = PERFIL.avatar || "";
       $("perfilEditar").classList.remove("oculto");
@@ -1437,7 +1427,7 @@
     $("btnSalvarPerfil").addEventListener("click", async () => {
       try {
         await executar("salvarPerfil", estado.token, $("perfilEditar").dataset.av || "",
-          $("perfilSobreEdit").value, $("perfilSelMusica").value);
+          $("perfilSobreEdit").value, PERFIL.musica || "");
         mostrarMensagem("Perfil salvo.", "ok");
         await abrirPerfil(PERFIL.id);
       } catch (erro) {}
@@ -1452,10 +1442,22 @@
       } catch (erro) {}
     });
 
-    $("btnSegOk").addEventListener("click", () => $("modalSeguranca").classList.add("oculto"));
+    // Depois do aviso de segurança, o membro vê o próprio perfil (uma vez por login).
+    function mostrarPerfilInicial() {
+      if (!estado.usuario || estado.usuario.perfil === "ADMIN") return;
+      if (sessionStorage.getItem("perfilInicialVisto") === "1") return;
+      sessionStorage.setItem("perfilInicialVisto", "1");
+      abrirPerfil(estado.usuario.id);
+    }
+
+    $("btnSegOk").addEventListener("click", () => {
+      $("modalSeguranca").classList.add("oculto");
+      mostrarPerfilInicial();
+    });
     $("btnSegConta").addEventListener("click", () => {
       $("modalSeguranca").classList.add("oculto");
       document.querySelector('.abaBotao[data-aba="conta"]').click();
+      mostrarPerfilInicial();
     });
 
     async function carregar() {
@@ -1835,7 +1837,6 @@
     }
 
     function atualizarBarra() {
-      if ($("btnMeuPerfil")) $("btnMeuPerfil").classList.toggle("oculto", !estado.usuario || estado.usuario.perfil === "ADMIN");
       atualizarLembrete();
       atualizarAvisoPendentes();
       atualizarHall();
@@ -3430,6 +3431,6 @@ vitoria|Vitória|#e31b23|#140b0c|#ffffff`.split("\n").forEach(l => {
       }
     })();
   </script>
-  <footer id="versaoApp" class="muted" style="text-align:center;font-size:12px;padding:18px 0 28px">V19 · 27/11/26</footer>
+  <footer id="versaoApp" class="muted" style="text-align:center;font-size:12px;padding:18px 0 28px">V20 · 27/11/26</footer>
 </body>
 </html>
