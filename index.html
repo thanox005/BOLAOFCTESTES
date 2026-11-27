@@ -473,6 +473,27 @@
       background: var(--verde); border-color: var(--verde); color: var(--on);
       transform: scale(1.08);
     }
+    /* perfil (esqueleto) */
+    .perfilCard { max-width: 460px; width: 100%; max-height: 92vh; overflow: auto; }
+    .perfilTopo { display: flex; align-items: center; gap: 14px; margin: 6px 0 12px; }
+    .perfilAvatar { width: clamp(72px, 22vw, 116px); height: clamp(72px, 22vw, 116px); border-radius: 50%;
+      border: 3px solid var(--borda); background: var(--painel2) center/cover no-repeat; padding: 0; flex-shrink: 0; }
+    .perfilCurtir { background: transparent; color: var(--vermelho); font-size: 26px; padding: 4px 10px; border-radius: 999px; margin-left: auto; }
+    .perfilCurtir[disabled] { opacity: .35; }
+    .perfilSecao { border-top: 1px solid var(--borda); padding: 10px 0; }
+    .perfilSecao h3 { margin: 0 0 6px; font-size: 14px; }
+    .perfilMusica { display: flex; align-items: center; gap: 10px; }
+    .perfilMusica button { width: 42px; height: 42px; border-radius: 999px; padding: 0; font-size: 16px; }
+    .hGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(14px, 1fr)); gap: 4px; max-width: 100%; }
+    .hCel { aspect-ratio: 1 / 1; border-radius: 3px; background: var(--painel2); border: 1px solid var(--borda); }
+    .hCel.n1 { background: #3d5a48; }
+    .hCel.n2 { background: #5f8a6b; }
+    .hCel.n3 { background: #d9a031; }
+    .hCel.n4 { background: #e8742c; }
+    .hCel.n5 { background: #ff3b1f; box-shadow: 0 0 6px rgba(255,59,31,.6); }
+    .avGrade { display: grid; grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); gap: 8px; margin: 6px 0; }
+    .avItem { width: 100%; aspect-ratio: 1 / 1; border-radius: 50%; border: 2px solid transparent; background: var(--painel2) center/cover no-repeat; padding: 0; }
+    .avItem[aria-selected="true"] { border-color: var(--verde); }
   </style>
 </head>
 
@@ -796,6 +817,19 @@
             </div>
           </div>
           <div style="margin:6px 0 18px;padding:12px;border:1px solid var(--borda);border-radius:14px">
+            <h3 style="margin:0 0 6px">Avatares e músicas do perfil</h3>
+            <form id="formCatPerfil">
+              <label>Avatares (um link https:// por linha)
+                <textarea id="catAvatares" rows="4" placeholder="https://..."></textarea>
+              </label>
+              <label>Músicas (uma por linha, formato nome;link)
+                <textarea id="catTrilhas" rows="4" placeholder="Torcida;https://..."></textarea>
+              </label>
+              <div class="botoes"><button type="submit" class="pequeno">Salvar catálogos</button></div>
+            </form>
+          </div>
+
+          <div style="margin:6px 0 18px;padding:12px;border:1px solid var(--borda);border-radius:14px">
             <h3 style="margin:0 0 6px">Convite e limite de participantes</h3>
             <div class="muted" id="cfgVagas" style="margin-bottom:8px"></div>
             <form id="formConvite">
@@ -1047,6 +1081,59 @@
     <button id="btnBaixarPrint" type="button" class="secundario" disabled>⬇️ Baixar</button>
   </div>
 
+  <div id="modalPerfil" class="oculto" style="position:fixed;inset:0;z-index:85;background:rgba(0,0,0,.6);overflow:auto;padding:14px;display:flex;align-items:flex-start;justify-content:center">
+    <div class="card perfilCard" style="margin-top:20px">
+      <div class="linha"><span class="muted">Perfil</span><button id="btnFecharPerfil" type="button" class="secundario pequeno">Fechar</button></div>
+      <div class="perfilTopo">
+        <button id="perfilAvatar" class="perfilAvatar" type="button" aria-label="Foto de perfil"></button>
+        <div>
+          <h2 id="perfilNome" style="margin:0"></h2>
+          <div class="muted" id="perfilCurtidas"></div>
+        </div>
+        <button id="btnCurtir" class="perfilCurtir" type="button" aria-pressed="false" aria-label="Curtir">♡</button>
+      </div>
+
+      <div class="perfilSecao">
+        <h3>Títulos</h3>
+        <div class="muted">Títulos em breve.</div>
+      </div>
+
+      <div class="perfilSecao">
+        <h3>Sobre</h3>
+        <div id="perfilSobre" class="muted"></div>
+      </div>
+
+      <div class="perfilSecao">
+        <h3>Música</h3>
+        <div class="perfilMusica">
+          <button id="btnMusica" type="button" class="pequeno" aria-label="Tocar">▶</button>
+          <span id="perfilMusicaNome" class="muted">Sem música escolhida</span>
+        </div>
+        <audio id="audioPerfil" preload="none"></audio>
+      </div>
+
+      <div class="perfilSecao">
+        <h3>Histórico</h3>
+        <div id="perfilHistorico" class="hGrid"></div>
+        <div class="muted" id="perfilResumo" style="margin-top:8px;font-size:13px"></div>
+      </div>
+
+      <button id="btnEditarPerfil" type="button" class="secundario pequeno oculto">Editar meu perfil</button>
+
+      <div id="perfilEditar" class="oculto perfilSecao">
+        <h3>Escolha seu avatar</h3>
+        <div id="avGrade" class="avGrade"></div>
+        <label>Sobre você (até 200 caracteres)
+          <textarea id="perfilSobreEdit" rows="3" maxlength="200"></textarea>
+        </label>
+        <label>Música
+          <select id="perfilSelMusica"></select>
+        </label>
+        <div class="botoes"><button type="button" id="btnSalvarPerfil">Salvar perfil</button></div>
+      </div>
+    </div>
+  </div>
+
   <div id="modalSeguranca" class="oculto" style="position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:18px">
     <div class="card" style="max-width:420px;width:100%;border:2px solid var(--vermelho)">
       <div style="font-size:12px;letter-spacing:1px;color:var(--vermelho);font-weight:900">🔐 SEGURANÇA DO BOLÃO</div>
@@ -1231,6 +1318,132 @@
         " Não compartilhe seu PIN com ninguém.";
       $("modalSeguranca").classList.remove("oculto");
     }
+
+    /* ===== Perfil do participante (esqueleto) ===== */
+    let PERFIL = null, CAT_PERFIL = null, AUDIO_PERFIL_URL = "";
+
+    async function carregarCatalogoPerfil() {
+      if (CAT_PERFIL) return CAT_PERFIL;
+      CAT_PERFIL = await chamarServidor("listarCatalogosPerfil", estado.token);
+      return CAT_PERFIL;
+    }
+
+    function nivelDoDia(acertos, exatos) {
+      if (acertos >= 5) return "n5";
+      if (acertos >= 4) return "n4";
+      if (acertos >= 3) return "n3";
+      if (acertos >= 2) return "n2";
+      if (acertos >= 1) return "n1";
+      return "";
+    }
+
+    function renderPerfil(p) {
+      PERFIL = p;
+      const av = $("perfilAvatar");
+      av.style.backgroundImage = p.avatar ? `url("${p.avatar}")` : "none";
+      $("perfilNome").textContent = p.nome;
+      $("perfilCurtidas").textContent = "♥ " + p.curtidas + (p.curtidas === 1 ? " curtida" : " curtidas");
+
+      const bc = $("btnCurtir");
+      bc.textContent = p.euCurti ? "♥" : "♡";
+      bc.setAttribute("aria-pressed", String(p.euCurti));
+      bc.disabled = p.souEu;
+
+      $("perfilSobre").textContent = p.sobre || (p.souEu ? "Conte algo sobre você." : "Sem descrição.");
+
+      const cat = CAT_PERFIL || { trilhas: [] };
+      const tr = cat.trilhas.find(t => t.url === p.musica);
+      $("perfilMusicaNome").textContent = tr ? tr.nome : "Sem música escolhida";
+      AUDIO_PERFIL_URL = p.musica || "";
+      $("btnMusica").textContent = "▶";
+
+      const grade = p.historico || [];
+      $("perfilHistorico").innerHTML = grade.length
+        ? grade.map(h => `<div class="hCel ${nivelDoDia(h.acertos, h.exatos)}" title="R${h.rodada}: ${h.acertos} acertos, ${h.exatos} exatos"></div>`).join("")
+        : '<div class="muted">Sem rodadas fechadas ainda.</div>';
+      const quentes = grade.filter(h => h.acertos >= 5).length;
+      $("perfilResumo").textContent = p.exatos + " placares exatos · " + quentes + " rodada(s) quente(s)";
+
+      $("btnEditarPerfil").classList.toggle("oculto", !p.souEu);
+      $("perfilEditar").classList.add("oculto");
+    }
+
+    async function abrirPerfil(id) {
+      $("modalPerfil").classList.remove("oculto");
+      try {
+        await carregarCatalogoPerfil();
+        const p = await chamarServidor("obterPerfil", estado.token, id);
+        renderPerfil(p);
+      } catch (erro) {
+        mostrarMensagem(erro.message || "Não consegui abrir o perfil.", "erro");
+        $("modalPerfil").classList.add("oculto");
+      }
+    }
+
+    $("listaRanking").addEventListener("click", e => {
+      const l = e.target.closest("[data-perfil]");
+      if (l) abrirPerfil(l.dataset.perfil);
+    });
+    $("btnFecharPerfil").addEventListener("click", () => {
+      $("btnMusica").textContent = "▶";
+      $("audioPerfil").pause();
+      $("modalPerfil").classList.add("oculto");
+    });
+
+    $("btnCurtir").addEventListener("click", async () => {
+      if (!PERFIL || PERFIL.souEu) return;
+      try {
+        const r = await executar("alternarCurtida", estado.token, PERFIL.id);
+        PERFIL.euCurti = r.euCurti; PERFIL.curtidas = r.curtidas;
+        renderPerfil(PERFIL);
+      } catch (erro) {}
+    });
+
+    $("btnMusica").addEventListener("click", () => {
+      const a = $("audioPerfil");
+      if (!PERFIL || !PERFIL.musica) return mostrarMensagem("Esse membro ainda não escolheu música.", "erro");
+      if (a.src !== AUDIO_PERFIL_URL) a.src = AUDIO_PERFIL_URL;
+      if (a.paused) { a.play(); $("btnMusica").textContent = "❚❚"; }
+      else { a.pause(); $("btnMusica").textContent = "▶"; }
+    });
+    $("audioPerfil").addEventListener("ended", () => { $("btnMusica").textContent = "▶"; });
+
+    $("btnEditarPerfil").addEventListener("click", () => {
+      const cat = CAT_PERFIL || { avatares: [], trilhas: [] };
+      $("avGrade").innerHTML = cat.avatares.length
+        ? cat.avatares.map(u => `<button type="button" class="avItem" data-av="${textoSeguro(u)}" aria-selected="${u === PERFIL.avatar}" style="background-image:url('${textoSeguro(u)}')"></button>`).join("")
+        : '<div class="muted">Nenhum avatar cadastrado ainda.</div>';
+      $("perfilSelMusica").innerHTML = '<option value="">Sem música</option>' +
+        cat.trilhas.map(t => `<option value="${textoSeguro(t.url)}" ${t.url === PERFIL.musica ? "selected" : ""}>${textoSeguro(t.nome)}</option>`).join("");
+      $("perfilSobreEdit").value = PERFIL.sobre || "";
+      $("perfilEditar").dataset.av = PERFIL.avatar || "";
+      $("perfilEditar").classList.remove("oculto");
+    });
+
+    $("avGrade").addEventListener("click", e => {
+      const b = e.target.closest("[data-av]");
+      if (!b) return;
+      $("perfilEditar").dataset.av = b.dataset.av;
+      $("avGrade").querySelectorAll(".avItem").forEach(x => x.setAttribute("aria-selected", String(x === b)));
+    });
+
+    $("btnSalvarPerfil").addEventListener("click", async () => {
+      try {
+        await executar("salvarPerfil", estado.token, $("perfilEditar").dataset.av || "",
+          $("perfilSobreEdit").value, $("perfilSelMusica").value);
+        mostrarMensagem("Perfil salvo.", "ok");
+        await abrirPerfil(PERFIL.id);
+      } catch (erro) {}
+    });
+
+    $("formCatPerfil").addEventListener("submit", async e => {
+      e.preventDefault();
+      try {
+        await executar("definirCatalogosPerfil", estado.token, $("catAvatares").value, $("catTrilhas").value);
+        CAT_PERFIL = null;
+        mostrarMensagem("Catálogos salvos.", "ok");
+      } catch (erro) {}
+    });
 
     $("btnSegOk").addEventListener("click", () => $("modalSeguranca").classList.add("oculto"));
     $("btnSegConta").addEventListener("click", () => {
@@ -1770,7 +1983,7 @@
 
       const medalha = p => ["🥇", "🥈", "🥉"][p - 1] || "";
       $("listaRanking").innerHTML = ranking.map(r => `
-        <div class="linha ${r.posicao <= 3 && r.pontos > 0 ? "podio" : ""}">
+        <div class="linha ${r.posicao <= 3 && r.pontos > 0 ? "podio" : ""}" data-perfil="${textoSeguro(r.usuarioId)}" style="cursor:pointer">
           <div>
             <strong>${r.posicao <= 3 && r.pontos > 0 ? `<span class="medalha">${medalha(r.posicao)}</span>` : ""}${r.posicao}º — ${textoSeguro(r.nome)}</strong>
             <div class="muted">${r.exatos} placar(es) exato(s)</div>
@@ -3209,6 +3422,6 @@ vitoria|Vitória|#e31b23|#140b0c|#ffffff`.split("\n").forEach(l => {
       }
     })();
   </script>
-  <footer id="versaoApp" class="muted" style="text-align:center;font-size:12px;padding:18px 0 28px">V17 · 26/11/26</footer>
+  <footer id="versaoApp" class="muted" style="text-align:center;font-size:12px;padding:18px 0 28px">V18 · 27/11/26</footer>
 </body>
 </html>
