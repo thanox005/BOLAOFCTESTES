@@ -591,7 +591,10 @@
             <button id="btnStatusAcessos" type="button" class="tag oculto"
               style="cursor:pointer;border:0;margin-left:6px" title="Ver registro de entradas">👁 Acessos</button>
           </div>
-          <button id="btnSair" class="secundario pequeno">Sair</button>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button id="btnMeuPerfil" class="secundario pequeno oculto">👤 Meu perfil</button>
+            <button id="btnSair" class="secundario pequeno">Sair</button>
+          </div>
         </div>
       </div>
 
@@ -1384,6 +1387,10 @@
       const l = e.target.closest("[data-perfil]");
       if (l) abrirPerfil(l.dataset.perfil);
     });
+    $("btnMeuPerfil").addEventListener("click", () => {
+      if (estado.usuario) abrirPerfil(estado.usuario.id);
+    });
+
     $("btnFecharPerfil").addEventListener("click", () => {
       $("btnMusica").textContent = "▶";
       $("audioPerfil").pause();
@@ -1828,6 +1835,7 @@
     }
 
     function atualizarBarra() {
+      if ($("btnMeuPerfil")) $("btnMeuPerfil").classList.toggle("oculto", !estado.usuario || estado.usuario.perfil === "ADMIN");
       atualizarLembrete();
       atualizarAvisoPendentes();
       atualizarHall();
@@ -3422,6 +3430,6 @@ vitoria|Vitória|#e31b23|#140b0c|#ffffff`.split("\n").forEach(l => {
       }
     })();
   </script>
-  <footer id="versaoApp" class="muted" style="text-align:center;font-size:12px;padding:18px 0 28px">V18 · 27/11/26</footer>
+  <footer id="versaoApp" class="muted" style="text-align:center;font-size:12px;padding:18px 0 28px">V19 · 27/11/26</footer>
 </body>
 </html>
