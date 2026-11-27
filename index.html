@@ -474,7 +474,7 @@
       transform: scale(1.08);
     }
     /* perfil (esqueleto) */
-    .perfilCard { max-width: 460px; width: 100%; max-height: 92vh; overflow: auto; }
+    .perfilCorpo { width: 100%; }
     .perfilTopo { display: flex; align-items: center; gap: 14px; margin: 6px 0 12px; }
     .perfilAvatar { width: clamp(72px, 22vw, 116px); height: clamp(72px, 22vw, 116px); border-radius: 50%;
       border: 3px solid var(--borda); background: var(--painel2) center/cover no-repeat; padding: 0; flex-shrink: 0; }
@@ -582,7 +582,7 @@
 
     <!-- APLICATIVO -->
     <section id="telaApp" class="oculto">
-      <div class="card">
+      <div class="card" id="cartaoAdm">
         <div class="linha">
           <div>
             <div class="muted">Bem-vindo(a),</div>
@@ -593,6 +593,63 @@
           </div>
           <button id="btnSair" class="secundario pequeno">Sair</button>
         </div>
+      </div>
+
+      <div class="card oculto" id="cartaoJog">
+        <div class="linha" style="margin-bottom:6px">
+          <div class="muted" id="perfilTitulo">Seu perfil</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button id="btnVoltarPerfil" type="button" class="secundario pequeno oculto">← Meu perfil</button>
+            <button id="btnSairJog" type="button" class="secundario pequeno">Sair</button>
+          </div>
+        </div>
+    <div class="perfilCorpo">
+      <div class="perfilTopo">
+        <button id="perfilAvatar" class="perfilAvatar" type="button" aria-label="Foto de perfil"></button>
+        <div>
+          <h2 id="perfilNome" style="margin:0"></h2>
+          <div class="muted" id="perfilCurtidas"></div>
+        </div>
+        <button id="btnEditarPerfil" class="secundario pequeno oculto" type="button" aria-label="Editar perfil" style="margin-left:auto">✏️</button>
+        <button id="btnCurtir" class="perfilCurtir" type="button" aria-pressed="false" aria-label="Curtir">♡</button>
+      </div>
+
+      <div class="perfilSecao">
+        <h3>Títulos</h3>
+        <div class="muted">Títulos em breve.</div>
+      </div>
+
+      <div class="perfilSecao">
+        <h3>Sobre</h3>
+        <div id="perfilSobre" class="muted"></div>
+      </div>
+
+      <div class="perfilSecao">
+        <h3>Música</h3>
+        <div class="perfilMusica">
+          <button id="btnMusica" type="button" class="pequeno" aria-label="Tocar">▶</button>
+          <span id="perfilMusicaNome" class="muted">Sem música escolhida</span>
+        </div>
+        <audio id="audioPerfil" preload="none"></audio>
+      </div>
+
+      <div class="perfilSecao">
+        <h3>Histórico</h3>
+        <div id="perfilHistorico" class="hGrid"></div>
+        <div class="muted" id="perfilResumo" style="margin-top:8px;font-size:13px"></div>
+      </div>
+
+      <div id="perfilEditar" class="oculto perfilSecao">
+        <h3>Escolha seu avatar</h3>
+        <div id="avGrade" class="avGrade"></div>
+        <label>Sobre você (até 200 caracteres)
+          <textarea id="perfilSobreEdit" rows="3" maxlength="200"></textarea>
+        </label>
+        <div class="muted" style="font-size:12px;margin-top:6px">Música: em breve.</div>
+        <div class="botoes"><button type="button" id="btnSalvarPerfil">Salvar perfil</button></div>
+      </div>
+    </div>
+  </div>
       </div>
 
       <div id="muralAvisos"></div>
@@ -1081,56 +1138,6 @@
     <button id="btnBaixarPrint" type="button" class="secundario" disabled>⬇️ Baixar</button>
   </div>
 
-  <div id="modalPerfil" class="oculto" style="position:fixed;inset:0;z-index:85;background:rgba(0,0,0,.6);overflow:auto;padding:14px;display:flex;align-items:flex-start;justify-content:center">
-    <div class="card perfilCard" style="margin-top:20px">
-      <div class="linha"><span class="muted">Perfil</span><button id="btnFecharPerfil" type="button" class="secundario pequeno">Fechar</button></div>
-      <div class="perfilTopo">
-        <button id="perfilAvatar" class="perfilAvatar" type="button" aria-label="Foto de perfil"></button>
-        <div>
-          <h2 id="perfilNome" style="margin:0"></h2>
-          <div class="muted" id="perfilCurtidas"></div>
-        </div>
-        <button id="btnEditarPerfil" class="secundario pequeno oculto" type="button" aria-label="Editar perfil" style="margin-left:auto">✏️</button>
-        <button id="btnCurtir" class="perfilCurtir" type="button" aria-pressed="false" aria-label="Curtir">♡</button>
-      </div>
-
-      <div class="perfilSecao">
-        <h3>Títulos</h3>
-        <div class="muted">Títulos em breve.</div>
-      </div>
-
-      <div class="perfilSecao">
-        <h3>Sobre</h3>
-        <div id="perfilSobre" class="muted"></div>
-      </div>
-
-      <div class="perfilSecao">
-        <h3>Música</h3>
-        <div class="perfilMusica">
-          <button id="btnMusica" type="button" class="pequeno" aria-label="Tocar">▶</button>
-          <span id="perfilMusicaNome" class="muted">Sem música escolhida</span>
-        </div>
-        <audio id="audioPerfil" preload="none"></audio>
-      </div>
-
-      <div class="perfilSecao">
-        <h3>Histórico</h3>
-        <div id="perfilHistorico" class="hGrid"></div>
-        <div class="muted" id="perfilResumo" style="margin-top:8px;font-size:13px"></div>
-      </div>
-
-      <div id="perfilEditar" class="oculto perfilSecao">
-        <h3>Escolha seu avatar</h3>
-        <div id="avGrade" class="avGrade"></div>
-        <label>Sobre você (até 200 caracteres)
-          <textarea id="perfilSobreEdit" rows="3" maxlength="200"></textarea>
-        </label>
-        <div class="muted" style="font-size:12px;margin-top:6px">Música: em breve.</div>
-        <div class="botoes"><button type="button" id="btnSalvarPerfil">Salvar perfil</button></div>
-      </div>
-    </div>
-  </div>
-
   <div id="modalSeguranca" class="oculto" style="position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:18px">
     <div class="card" style="max-width:420px;width:100%;border:2px solid var(--vermelho)">
       <div style="font-size:12px;letter-spacing:1px;color:var(--vermelho);font-weight:900">🔐 SEGURANÇA DO BOLÃO</div>
@@ -1367,27 +1374,48 @@
       $("perfilEditar").classList.add("oculto");
     }
 
+    // Perfil dentro do cartão da tela inicial (sem popup).
+    let PERFIL_VIEW = null;
+
     async function abrirPerfil(id) {
-      $("modalPerfil").classList.remove("oculto");
+      if (!estado.usuario || estado.usuario.perfil === "ADMIN") return;
+      PERFIL_VIEW = String(id);
+      const souEu = String(id) === String(estado.usuario.id);
+      $("perfilTitulo").textContent = souEu ? "Seu perfil" : "Perfil do participante";
+      $("btnVoltarPerfil").classList.toggle("oculto", souEu);
+      $("cartaoJog").classList.remove("oculto");
       try {
         await carregarCatalogoPerfil();
         const p = await chamarServidor("obterPerfil", estado.token, id);
         renderPerfil(p);
       } catch (erro) {
         mostrarMensagem(erro.message || "Não consegui abrir o perfil.", "erro");
-        $("modalPerfil").classList.add("oculto");
       }
+      if (!souEu) $("cartaoJog").scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    // Mostra o cartão certo para o perfil: admin vê o painel; participante vê o próprio perfil.
+    function atualizarCartaoHome() {
+      const u = estado.usuario;
+      const ehAdm = !!u && u.perfil === "ADMIN";
+      const cAdm = $("cartaoAdm"), cJog = $("cartaoJog");
+      if (!cAdm || !cJog) return;
+      cAdm.classList.toggle("oculto", !ehAdm);
+      if (!u || ehAdm) { cJog.classList.add("oculto"); return; }
+      if (!PERFIL_VIEW) abrirPerfil(u.id);
+      else cJog.classList.remove("oculto");
     }
 
     $("listaRanking").addEventListener("click", e => {
       const l = e.target.closest("[data-perfil]");
       if (l) abrirPerfil(l.dataset.perfil);
     });
-    $("btnFecharPerfil").addEventListener("click", () => {
-      $("btnMusica").textContent = "▶";
-      $("audioPerfil").pause();
-      $("modalPerfil").classList.add("oculto");
+
+    $("btnVoltarPerfil").addEventListener("click", () => {
+      if (estado.usuario) abrirPerfil(estado.usuario.id);
     });
+
+    $("btnSairJog").addEventListener("click", () => $("btnSair").click());
 
     $("btnCurtir").addEventListener("click", async () => {
       if (!PERFIL || PERFIL.souEu) return;
@@ -1442,22 +1470,12 @@
       } catch (erro) {}
     });
 
-    // Depois do aviso de segurança, o membro vê o próprio perfil (uma vez por login).
-    function mostrarPerfilInicial() {
-      if (!estado.usuario || estado.usuario.perfil === "ADMIN") return;
-      if (sessionStorage.getItem("perfilInicialVisto") === "1") return;
-      sessionStorage.setItem("perfilInicialVisto", "1");
-      abrirPerfil(estado.usuario.id);
-    }
-
     $("btnSegOk").addEventListener("click", () => {
       $("modalSeguranca").classList.add("oculto");
-      mostrarPerfilInicial();
     });
     $("btnSegConta").addEventListener("click", () => {
       $("modalSeguranca").classList.add("oculto");
       document.querySelector('.abaBotao[data-aba="conta"]').click();
-      mostrarPerfilInicial();
     });
 
     async function carregar() {
@@ -1837,6 +1855,7 @@
     }
 
     function atualizarBarra() {
+      atualizarCartaoHome();
       atualizarLembrete();
       atualizarAvisoPendentes();
       atualizarHall();
@@ -3431,6 +3450,6 @@ vitoria|Vitória|#e31b23|#140b0c|#ffffff`.split("\n").forEach(l => {
       }
     })();
   </script>
-  <footer id="versaoApp" class="muted" style="text-align:center;font-size:12px;padding:18px 0 28px">V20 · 27/11/26</footer>
+  <footer id="versaoApp" class="muted" style="text-align:center;font-size:12px;padding:18px 0 28px">V21 · 27/11/26</footer>
 </body>
 </html>
