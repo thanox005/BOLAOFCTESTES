@@ -509,6 +509,16 @@
     .avOpc { flex: 0 0 auto; width: 48px; height: 48px; border-radius: 50%; padding: 0;
       background: var(--painel2) center/cover no-repeat; border: 2px solid transparent; }
     .avOpc[aria-selected="true"] { border-color: var(--verde); }
+    /* mobile: sem o quadrado azul do toque; prévia do histórico */
+    button, .hCel, .avOpc, .perfilAvatar { -webkit-tap-highlight-color: transparent; }
+    .perfilAvatar:focus:not(:focus-visible) { outline: none; }
+    .hCel { cursor: pointer; touch-action: manipulation; }
+    .hPrevia {
+      position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+      z-index: 95; padding: 10px 14px; border-radius: 12px; background: var(--painel);
+      border: 1px solid var(--borda); box-shadow: 0 10px 26px rgba(0,0,0,.3); font-size: 13px; color: var(--texto);
+      white-space: nowrap; pointer-events: none; animation: entraAv .2s ease;
+    }
   </style>
 </head>
 
@@ -1380,7 +1390,7 @@
 
       const grade = p.historico || [];
       $("perfilHistorico").innerHTML = grade.length
-        ? grade.map(h => `<div class="hCel ${nivelDoDia(h.acertos, h.exatos)}" title="R${h.rodada}: ${h.acertos} acertos, ${h.exatos} exatos"></div>`).join("")
+        ? grade.map(h => `<div class="hCel ${nivelDoDia(h.acertos, h.exatos)}" data-txt="Rodada ${h.rodada}: ${h.acertos} acerto(s), ${h.exatos} exato(s)"></div>`).join("")
         : '<div class="muted">Sem rodadas fechadas ainda.</div>';
       const quentes = grade.filter(h => h.acertos >= 5).length;
       $("perfilResumo").textContent = p.exatos + " placares exatos · " + quentes + " rodada(s) quente(s)";
@@ -1442,6 +1452,28 @@
         PERFIL.euCurti = r.euCurti; PERFIL.curtidas = r.curtidas;
         renderPerfil(PERFIL);
       } catch (erro) {}
+    });
+
+    // Prévia do quadrado do histórico: mouse em cima (PC) ou toque (celular).
+    function mostrarPreviaHist(el) {
+      document.querySelectorAll(".hPrevia").forEach(x => x.remove());
+      if (!el || !el.dataset.txt) return;
+      const d = document.createElement("div");
+      d.className = "hPrevia";
+      d.textContent = el.dataset.txt;
+      document.body.appendChild(d);
+    }
+    document.addEventListener("mouseover", e => {
+      const c = e.target.closest && e.target.closest(".hCel");
+      if (c) mostrarPreviaHist(c);
+    });
+    document.addEventListener("mouseout", e => {
+      if (e.target.closest && e.target.closest(".hCel")) mostrarPreviaHist(null);
+    });
+    document.addEventListener("click", e => {
+      const c = e.target.closest && e.target.closest(".hCel");
+      if (c) { mostrarPreviaHist(c); return; }
+      if (!e.target.closest(".hPrevia")) mostrarPreviaHist(null);
     });
 
     $("btnMusica").addEventListener("click", () => {
@@ -3502,6 +3534,6 @@ vitoria|Vitória|#e31b23|#140b0c|#ffffff`.split("\n").forEach(l => {
       }
     })();
   </script>
-  <footer id="versaoApp" class="muted" style="text-align:center;font-size:12px;padding:18px 0 28px">V22 · 28/11/26</footer>
+  <footer id="versaoApp" class="muted" style="text-align:center;font-size:12px;padding:18px 0 28px">V23 · 28/11/26</footer>
 </body>
 </html>
