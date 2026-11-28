@@ -494,6 +494,21 @@
     .avGrade { display: grid; grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); gap: 8px; margin: 6px 0; }
     .avItem { width: 100%; aspect-ratio: 1 / 1; border-radius: 50%; border: 2px solid transparent; background: var(--painel2) center/cover no-repeat; padding: 0; }
     .avItem[aria-selected="true"] { border-color: var(--verde); }
+    /* avatar: gira ao tocar e abre a fileira lateral */
+    .avWrap { position: relative; flex-shrink: 0; }
+    .perfilAvatar.clicavel { cursor: pointer; }
+    .perfilAvatar.girando { animation: giraAv .7s ease-in-out; }
+    @keyframes giraAv { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
+    .avPainel {
+      position: absolute; left: calc(100% + 12px); top: 50%; transform: translateY(-50%);
+      display: flex; gap: 8px; padding: 8px; border-radius: 14px; z-index: 5;
+      background: var(--painel); border: 1px solid var(--borda); box-shadow: 0 12px 28px rgba(0,0,0,.3);
+      max-width: min(240px, 62vw); overflow-x: auto; animation: entraAv .3s ease;
+    }
+    @keyframes entraAv { from { opacity: 0; transform: translate(-12px, -50%); } to { opacity: 1; transform: translate(0, -50%); } }
+    .avOpc { flex: 0 0 auto; width: 48px; height: 48px; border-radius: 50%; padding: 0;
+      background: var(--painel2) center/cover no-repeat; border: 2px solid transparent; }
+    .avOpc[aria-selected="true"] { border-color: var(--verde); }
   </style>
 </head>
 
@@ -605,7 +620,10 @@
         </div>
     <div class="perfilCorpo">
       <div class="perfilTopo">
-        <button id="perfilAvatar" class="perfilAvatar" type="button" aria-label="Foto de perfil"></button>
+        <div class="avWrap">
+          <button id="perfilAvatar" class="perfilAvatar" type="button" aria-label="Foto de perfil"></button>
+          <div id="avPainel" class="avPainel oculto"></div>
+        </div>
         <div>
           <h2 id="perfilNome" style="margin:0"></h2>
           <div class="muted" id="perfilCurtidas"></div>
@@ -640,8 +658,6 @@
       </div>
 
       <div id="perfilEditar" class="oculto perfilSecao">
-        <h3>Escolha seu avatar</h3>
-        <div id="avGrade" class="avGrade"></div>
         <label>Sobre você (até 200 caracteres)
           <textarea id="perfilSobreEdit" rows="3" maxlength="200"></textarea>
         </label>
@@ -1370,6 +1386,8 @@
       $("perfilResumo").textContent = p.exatos + " placares exatos · " + quentes + " rodada(s) quente(s)";
 
       $("btnEditarPerfil").classList.toggle("oculto", !p.souEu);
+      $("perfilAvatar").classList.toggle("clicavel", !!p.souEu);
+      fecharAvPainel();
       $("btnCurtir").classList.toggle("oculto", !!p.souEu);
       $("perfilEditar").classList.add("oculto");
     }
@@ -1436,25 +1454,59 @@
     $("audioPerfil").addEventListener("ended", () => { $("btnMusica").textContent = "▶"; });
 
     $("btnEditarPerfil").addEventListener("click", () => {
-      const cat = CAT_PERFIL || { avatares: [], trilhas: [] };
-      $("avGrade").innerHTML = cat.avatares.length
-        ? cat.avatares.map(u => `<button type="button" class="avItem" data-av="${textoSeguro(u)}" aria-selected="${u === PERFIL.avatar}" style="background-image:url('${textoSeguro(u)}')"></button>`).join("")
-        : '<div class="muted">Nenhum avatar cadastrado ainda.</div>';
       $("perfilSobreEdit").value = PERFIL.sobre || "";
-      $("perfilEditar").dataset.av = PERFIL.avatar || "";
       $("perfilEditar").classList.remove("oculto");
     });
 
-    $("avGrade").addEventListener("click", e => {
+    // Clique na bolinha: gira e, ao terminar, abre a fileira de avatares ao lado.
+    $("perfilAvatar").addEventListener("click", e => {
+      e.stopPropagation();
+      if (!PERFIL || !PERFIL.souEu) return;
+      const av = $("perfilAvatar");
+      if (av.classList.contains("girando")) return;
+      if (!$("avPainel").classList.contains("oculto")) { fecharAvPainel(); return; }
+      av.classList.add("girando");
+      av.addEventListener("animationend", () => {
+        av.classList.remove("girando");
+        abrirAvPainel();
+      }, { once: true });
+    });
+
+    function abrirAvPainel() {
+      const cat = CAT_PERFIL || { avatares: [] };
+      const painel = $("avPainel");
+      painel.innerHTML = cat.avatares.length
+        ? cat.avatares.map(u => `<button type="button" class="avOpc" data-av="${textoSeguro(u)}"
+            aria-selected="${u === PERFIL.avatar}" style="background-image:url('${textoSeguro(u)}')"
+            aria-label="Escolher este avatar"></button>`).join("")
+        : '<div class="muted" style="padding:6px">Nenhum avatar cadastrado ainda.</div>';
+      painel.classList.remove("oculto");
+    }
+
+    function fecharAvPainel() {
+      $("avPainel").classList.add("oculto");
+    }
+
+    $("avPainel").addEventListener("click", async e => {
+      e.stopPropagation();
       const b = e.target.closest("[data-av]");
-      if (!b) return;
-      $("perfilEditar").dataset.av = b.dataset.av;
-      $("avGrade").querySelectorAll(".avItem").forEach(x => x.setAttribute("aria-selected", String(x === b)));
+      if (!b || !PERFIL) return;
+      try {
+        await executar("salvarPerfil", estado.token, b.dataset.av, PERFIL.sobre || "", PERFIL.musica || "");
+        fecharAvPainel();
+        mostrarMensagem("Avatar trocado.", "ok");
+        await abrirPerfil(PERFIL.id);
+      } catch (erro) {}
+    });
+
+    // Tocar fora da fileira fecha ela.
+    document.addEventListener("click", e => {
+      if (!e.target.closest(".avWrap")) fecharAvPainel();
     });
 
     $("btnSalvarPerfil").addEventListener("click", async () => {
       try {
-        await executar("salvarPerfil", estado.token, $("perfilEditar").dataset.av || "",
+        await executar("salvarPerfil", estado.token, PERFIL.avatar || "",
           $("perfilSobreEdit").value, PERFIL.musica || "");
         mostrarMensagem("Perfil salvo.", "ok");
         await abrirPerfil(PERFIL.id);
@@ -3450,6 +3502,6 @@ vitoria|Vitória|#e31b23|#140b0c|#ffffff`.split("\n").forEach(l => {
       }
     })();
   </script>
-  <footer id="versaoApp" class="muted" style="text-align:center;font-size:12px;padding:18px 0 28px">V21 · 27/11/26</footer>
+  <footer id="versaoApp" class="muted" style="text-align:center;font-size:12px;padding:18px 0 28px">V22 · 28/11/26</footer>
 </body>
 </html>
